@@ -9,6 +9,7 @@ using Impostor.Api.Config;
 using Impostor.Api.Games;
 using Impostor.Api.Games.Managers;
 using Impostor.Api.Innersloth;
+using Impostor.Api.Innersloth.GameOptions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -308,9 +309,7 @@ public sealed class GamesController : ControllerBase
                 NumImpostors = game.Options.NumImpostors,
                 MapId = game.Options.Map,
                 Language = game.Options.Keywords,
-
-                // TODO don't hardcode
-                Options = "CXQAAAEAAA8AAQAAAgAAwD8AAEA/AAAAQAAAoEECAgQCAAAAAgEtAAAALQAAAAAPAAABAQAHBQABZAMAAAAKHgIAAWQCAAAKDwQAAkYDAAAjDwADAAFkAgAADw8IAAJkAgAACgEJAAFkAgAACh4KAAFkAwAADxQB",
+                Options = GameOptionsFactory.GetBase64JsonString(game.Options, false),
             };
         }
     }
