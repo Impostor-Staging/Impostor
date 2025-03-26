@@ -130,4 +130,10 @@ public static class GameOptionsFactory
         return result;
     }
     */
+
+    public static string GetBase64JsonString(IGameOptions gameOptions, bool forceAprilFoolsMode)
+    {
+        var bytes = ToBytes(gameOptions, forceAprilFoolsMode);
+        return Convert.ToBase64String(bytes);
+    }
 }
