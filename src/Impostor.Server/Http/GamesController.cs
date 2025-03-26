@@ -48,8 +48,10 @@ public sealed class GamesController : ControllerBase
     /// <param name="numImpostors">Amount of impostors. 0 is any.</param>
     /// <param name="authorization">Authorization header containing the matchmaking token.</param>
     /// <returns>An array of game listings.</returns>
-    [HttpGet]
-    public IActionResult Index(int mapId, GameKeywords lang, int numImpostors, [FromHeader] AuthenticationHeaderValue authorization)
+    ///
+    // /api/games/filtered?filter={"FilterSets":[{"GameMode":1,"Filters":[{"OptionType":"chat","Key":"Chat","SubFilterString":"{\"AcceptedValues\":1,\"FilterType\":\"chat\"}"},{"OptionType":"languages","Key":"Language","SubFilterString":"{\"AcceptedValues\":256,\"FilterType\":\"languages\"}"},{"OptionType":"map","Key":"Map","SubFilterString":"{\"AcceptedValues\":1,\"FilterType\":\"map\"}"},{"OptionType":"int","Key":"ImpostorNumber","SubFilterString":"{\"AcceptedValues\":[3],\"OptionEnum\":1,\"FilterType\":\"int\"}"}]}]}
+    [HttpGet("filtered")]
+    public IActionResult Index(/*int mapId, GameKeywords lang, int numImpostors,*/[FromHeader] AuthenticationHeaderValue authorization)
     {
         if (authorization.Scheme != "Bearer" || authorization.Parameter == null)
         {
@@ -62,10 +64,25 @@ public sealed class GamesController : ControllerBase
             return BadRequest();
         }
 
+        /*
         var clientVersion = new GameVersion(token.Content.ClientVersion);
 
         var listings = _listingManager.FindListings(HttpContext, mapId, numImpostors, lang, clientVersion);
-        return Ok(listings.Select(GameListing.From));
+
+        var gameListings = listings.Select(GameListingV2.From).ToArray();
+        */
+
+        var response = new
+        {
+            games = Array.Empty<GameListingV2>(),
+            metadata = new
+            {
+                allGamesCount = _gameManager.Games.Count(),
+                matchingGamesCount = 0,
+            },
+        };
+
+        return Ok(response);
     }
 
     /// <summary>
