@@ -9,6 +9,7 @@ using Impostor.Api.Config;
 using Impostor.Api.Games;
 using Impostor.Api.Games.Managers;
 using Impostor.Api.Innersloth;
+using Impostor.Server.Extensions;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 
@@ -95,6 +96,38 @@ public sealed class GamesController : ControllerBase
     public IActionResult Put()
     {
         return Ok(_hostServer);
+    }
+
+    [HttpGet("{gameId}")]
+    public IActionResult Show([FromRoute] int gameId)
+    {
+        var code = new GameCode(gameId);
+        var game = _gameManager.Find(code);
+
+        // If the game was not found, print an error message.
+        if (game == null)
+        {
+            return NotFound(new FindGameByCodeResponse(new MatchmakerError(DisconnectReason.GameNotFound)));
+        }
+
+        return Ok(new FindGameByCodeResponse(GameListingV2.From(game)));
+    }
+
+    [HttpGet("filtered")]
+    public IActionResult ShowFilteredLobbies()
+    {
+        // TODO: implement this stub
+        var response = new
+        {
+            games = Array.Empty<GameListingV2>(),
+            metadata = new
+            {
+                allGamesCount = _gameManager.Games.Count(),
+                matchingGamesCount = 0,
+            },
+        };
+
+        return Ok(response);
     }
 
     private static uint ConvertAddressToNumber(IPAddress address)
@@ -207,6 +240,93 @@ public sealed class GamesController : ControllerBase
                 NumImpostors = game.Options.NumImpostors,
                 MapId = game.Options.Map,
                 Language = game.Options.Keywords,
+            };
+        }
+    }
+
+    private class FindGameByCodeResponse
+    {
+        [SetsRequiredMembers]
+        public FindGameByCodeResponse(MatchmakerError error) => (Errors, Game) = (new[] { error }, null);
+
+        [SetsRequiredMembers]
+        public FindGameByCodeResponse(GameListingV2 game) => (Errors, Game) = (null, game);
+
+        [JsonPropertyName("Errors")]
+        public required MatchmakerError[]? Errors { get; init; }
+
+        [JsonPropertyName("Game")]
+        public required GameListingV2? Game { get; init; }
+    }
+
+    private class GameListingV2
+    {
+        [JsonPropertyName("IP")]
+        public required uint Ip { get; init; }
+
+        [JsonPropertyName("Port")]
+        public required ushort Port { get; init; }
+
+        [JsonPropertyName("GameId")]
+        public required int GameId { get; init; }
+
+        [JsonPropertyName("PlayerCount")]
+        public required int PlayerCount { get; init; }
+
+        [JsonPropertyName("HostName")]
+        public required string HostName { get; init; }
+
+        [JsonPropertyName("TrueHostName")]
+        public required string TrueHostName { get; init; }
+
+        [JsonPropertyName("HostPlatformName")]
+        public required string HostPlatformName { get; init; }
+
+        [JsonPropertyName("Platform")]
+        public required Platforms Platform { get; init; }
+
+        [JsonPropertyName("QuickChat")]
+        public required QuickChatModes QuickChat { get; init; }
+
+        [JsonPropertyName("Age")]
+        public required int Age { get; init; }
+
+        [JsonPropertyName("MaxPlayers")]
+        public required int MaxPlayers { get; init; }
+
+        [JsonPropertyName("NumImpostors")]
+        public required int NumImpostors { get; init; }
+
+        [JsonPropertyName("MapId")]
+        public required MapTypes MapId { get; init; }
+
+        [JsonPropertyName("Language")]
+        public required GameKeywords Language { get; init; }
+
+        [JsonPropertyName("Options")]
+        public required string Options { get; init; }
+
+        public static GameListingV2 From(IGame game)
+        {
+            var platform = game.Host?.Client.PlatformSpecificData;
+
+            return new GameListingV2
+            {
+                Ip = ConvertAddressToNumber(game.PublicIp.Address),
+                Port = (ushort)game.PublicIp.Port,
+                GameId = game.Code,
+                PlayerCount = game.PlayerCount,
+                HostName = game.DisplayName ?? game.Host?.Client.Name ?? "Unknown host",
+                TrueHostName = game.DisplayName ?? game.Host?.Client.Name ?? "Unknown host",
+                HostPlatformName = platform?.PlatformName ?? string.Empty,
+                Platform = platform?.Platform ?? Platforms.Unknown,
+                QuickChat = game.Host?.Client.ChatMode ?? QuickChatModes.QuickChatOnly,
+                Age = 0,
+                MaxPlayers = game.Options.MaxPlayers,
+                NumImpostors = game.Options.NumImpostors,
+                MapId = game.Options.Map,
+                Language = game.Options.Keywords,
+                Options = game.Options.ToBase64String(),
             };
         }
     }
