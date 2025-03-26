@@ -1,4 +1,5 @@
 using System;
+using Impostor.Hazel;
 
 namespace Impostor.Api.Innersloth.GameOptions;
 
@@ -73,4 +74,60 @@ public static class GameOptionsFactory
                 throw new ArgumentOutOfRangeException(nameof(gameMode), gameMode, null);
         }
     }
+
+    public static byte[] ToBytes(IGameOptions gameOptions, bool forceAprilFoolsMode)
+    {
+        var version = gameOptions.Version;
+
+        if (version < 7)
+        {
+            throw new NotImplementedException("Can not serialize legecy game options");
+        }
+
+        var gameModes = gameOptions.GameMode;
+        if (forceAprilFoolsMode)
+        {
+            switch (gameModes)
+            {
+                case GameModes.Normal:
+                case GameModes.NormalFools:
+                    gameModes = GameModes.NormalFools;
+                    break;
+                case GameModes.HideNSeek:
+                case GameModes.SeekFools:
+                    gameModes = GameModes.SeekFools;
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException("Gamemode does not exist.");
+            }
+        }
+
+        using var writer = MessageWriter.Get(MessageType.Unreliable);
+        writer.Write(version);
+        writer.StartMessage(0);
+        gameOptions.Serialize(writer);
+        writer.EndMessage();
+
+        return writer.ToByteArray(false);
+    }
+
+    // Problem: Impostor Hazel does not support MessageReader.GetSized
+    /*
+    public static IGameOptions FromBytes(byte[] rawBytes)
+    {
+        int num = rawBytes.Length;
+        int num2 = 0;
+        MessageReader sized = MessageReader.GetSized(num);
+        sized.Length = num;
+        rawBytes.CopyTo(sized.Buffer, 0);
+        sized.Offset = num2;
+        sized.Length = num - num2;
+        sized.Position = 0;
+        byte version = sized.ReadByte();
+        IGameOptions result = this.DeserializeByVersion(sized, version);
+        sized.Recycle();
+        return result;
+    }
+    */
 }
